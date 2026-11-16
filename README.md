@@ -62,9 +62,8 @@ Environment variables:
 | `GOOGLE_OAUTH_CLIENT_ID` | `client_id` from the client JSON |
 | `GOOGLE_OAUTH_CLIENT_SECRET` | `client_secret` from the client JSON |
 | `GOOGLE_REFRESH_TOKEN` | `refresh_token` from `token.json` |
-| `TZ` (optional) | e.g. `Europe/Warsaw`, for due dates in local time (otherwise UTC) |
 
-Command: `classroom-mcp` (stdio). Without the variables it falls back to the local `client_secret.json` and
+Due dates are returned in UTC; the AI client converts them to local time. Command: `classroom-mcp` (stdio). Without the variables it falls back to the local `client_secret.json` and
 `token.json`, so `claude mcp add classroom -- classroom-mcp` works on your own computer too.
 
 ## Security notes

@@ -86,6 +86,13 @@ def main():
     assert r[13]["result"]["isError"]
     assert r[14]["result"] == {}
 
+    # Google can grant coursework.me under its alias student-submissions.me.
+    sys.path.insert(0, str(ROOT))
+    import classroom_mcp as gc
+    alias = " ".join(s for s in gc.CLASSROOM_SCOPES if "coursework.me" not in s) + \
+        " https://www.googleapis.com/auth/classroom.student-submissions.me.readonly"
+    assert gc._covers(alias, gc.CLASSROOM_SCOPES) and not gc._covers(alias, gc.GMAIL_SCOPES)
+
     # No credentials at all: tools report login_required instead of crashing.
     r = rpc([call(1, "gc_courses"), call(2, "gc_status")], {})
     assert json.loads(text(r[1]))["login_required"] is True

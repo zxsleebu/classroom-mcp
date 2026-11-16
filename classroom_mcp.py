@@ -43,6 +43,16 @@ CLASSROOM_SCOPES = [
 ]
 GMAIL_SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 BASE_SCOPES = ["openid", "email"]
+# Google may grant a scope under an equivalent name.
+SCOPE_ALIASES = {
+    "https://www.googleapis.com/auth/classroom.coursework.me.readonly":
+        "https://www.googleapis.com/auth/classroom.student-submissions.me.readonly",
+}
+
+
+def _covers(granted, wanted):
+    granted = set((granted or "").split())
+    return all(s in granted or SCOPE_ALIASES.get(s) in granted for s in wanted)
 TOKEN_URL = "https://oauth2.googleapis.com/token"
 CLASSROOM = "https://classroom.googleapis.com/v1"
 GMAIL = "https://gmail.googleapis.com/gmail/v1/users/me"
@@ -420,9 +430,8 @@ def t_status(args):
     out = {"version": VERSION}
     try:
         info = _token_info()
-        granted = set((info.get("scope") or "").split())
         out.update(signed_in=True, email=info.get("email") or _email_from_id_token(info.get("id_token", "")),
-                   classroom=all(s in granted for s in CLASSROOM_SCOPES), gmail=all(s in granted for s in GMAIL_SCOPES))
+                   classroom=_covers(info.get("scope"), CLASSROOM_SCOPES), gmail=_covers(info.get("scope"), GMAIL_SCOPES))
     except LoginRequired as e:
         out.update(signed_in=False, login_required=True, error=str(e))
     except Exception as e:
@@ -625,10 +634,9 @@ def cli():
         scopes = BASE_SCOPES + ([] if "--no-classroom" in flags else CLASSROOM_SCOPES) \
             + ([] if "--no-gmail" in flags else GMAIL_SCOPES)
         tok = login(scopes)
-        granted = set((tok.get("scope") or "").split())
         print(json.dumps({"signed_in": True, "email": tok.get("email", ""), "token_file": str(TOKEN),
-                          "classroom": all(s in granted for s in CLASSROOM_SCOPES),
-                          "gmail": all(s in granted for s in GMAIL_SCOPES),
+                          "classroom": _covers(tok.get("scope"), CLASSROOM_SCOPES),
+                          "gmail": _covers(tok.get("scope"), GMAIL_SCOPES),
                           "next": "Put the refresh_token from token_file into GOOGLE_REFRESH_TOKEN on the server."},
                          indent=1))
     elif cmd == "serve":

@@ -1,108 +1,101 @@
-"""Offline tests: run with `python3 tests/test_classroom.py`. No Google account or network needed."""
+"""Offline tests: MCP protocol over stdio, Classroom and Gmail tools against canned Google responses.
+
+Run: python3 tests/test_classroom.py
+"""
 import json
 import os
 import subprocess
 import sys
 import tempfile
-import threading
-import time
-import urllib.parse
-import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-TMP = Path(tempfile.mkdtemp())
-os.environ.update(CLASSROOM_MCP_HOME=str(TMP / "home"), CLASSROOM_DIR=str(TMP / "Classroom"))
-sys.path.insert(0, str(ROOT))
-import classroom_mcp as gc  # noqa: E402
 
 
-def rpc(proc, mid, method, params=None):
-    proc.stdin.write(json.dumps({"jsonrpc": "2.0", "id": mid, "method": method, "params": params or {}}) + "\n")
-    proc.stdin.flush()
-    return json.loads(proc.stdout.readline())
+def fixtures():
+    d = json.loads((ROOT / "tests" / "fixtures.json").read_text())
+    soon = datetime.now(timezone.utc) + timedelta(days=3)
+    for cw in d["/v1/courses/111/courseWork"]["courseWork"]:
+        cw["dueDate"] = {"year": soon.year, "month": soon.month, "day": soon.day}
+    f = tempfile.NamedTemporaryFile("w", suffix=".json", delete=False)
+    json.dump(d, f)
+    f.close()
+    return f.name
 
 
-def test_stdio_protocol():
-    env = dict(os.environ, CLASSROOM_MCP_FAKE=str(ROOT / "tests" / "fixtures.json"))
-    p = subprocess.Popen([sys.executable, str(ROOT / "classroom_mcp.py")], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
-                         text=True, env=env)
-    try:
-        init = rpc(p, 1, "initialize", {"protocolVersion": "2025-06-18", "capabilities": {}, "clientInfo": {"name": "t"}})
-        assert init["result"]["serverInfo"]["name"] == "google-classroom"
-        p.stdin.write(json.dumps({"jsonrpc": "2.0", "method": "notifications/initialized"}) + "\n")
-        names = [t["name"] for t in rpc(p, 2, "tools/list")["result"]["tools"]]
-        assert {"gc_login", "gc_sync", "gc_sync_status", "gc_upcoming"} <= set(names), names
-        r = rpc(p, 3, "tools/call", {"name": "gc_coursework", "arguments": {"course": "history"}})
-        data = json.loads(r["result"]["content"][0]["text"])
-        assert data["course"] == "Year 12 History" and data["coursework"][0]["status"] == "TURNED_IN"
-        assert rpc(p, 4, "nope")["error"]["code"] == -32601
-    finally:
-        p.kill()
+def rpc(messages, env_extra):
+    env = {k: v for k, v in os.environ.items() if not k.startswith("GOOGLE_")}
+    env.update(env_extra)
+    env["CLASSROOM_MCP_HOME"] = tempfile.mkdtemp()
+    p = subprocess.run([sys.executable, "-I", str(ROOT / "classroom_mcp.py")], input="".join(json.dumps(m) + "\n" for m in messages),
+                       capture_output=True, text=True, env=env, timeout=30)
+    out = {}
+    for line in p.stdout.splitlines():
+        r = json.loads(line)
+        out[r["id"]] = r
+    return out
 
 
-def test_not_signed_in():
-    gc.FAKE = None
-    r = gc.call_tool("gc_sync", {})
-    assert r.get("isError") and json.loads(r["content"][0]["text"])["login_required"] is True
-    st = gc.t_status({})
-    assert st["signed_in"] is False
+def call(i, name, args=None):
+    return {"jsonrpc": "2.0", "id": i, "method": "tools/call", "params": {"name": name, "arguments": args or {}}}
 
 
-def test_missing_client_secret_message():
-    gc.FAKE = None
-    r = gc.call_tool("gc_login", {})
-    assert r["isError"] and "Desktop app" in r["content"][0]["text"]
+def text(r):
+    return r["result"]["content"][0]["text"]
 
 
-def test_oauth_loopback_flow():
-    """Simulate Google redirecting back to the local port; the code is exchanged and the token saved."""
-    gc.FAKE = None
-    (TMP / "home").mkdir(parents=True, exist_ok=True)
-    gc.SECRETS = TMP / "home" / "client_secret.json"
-    gc.SECRETS.write_text(json.dumps({"installed": {"client_id": "cid.apps.googleusercontent.com", "client_secret": "s"}}))
-    opened, exchanged = {}, {}
-    gc.subprocess.run = lambda cmd, check=False: opened.setdefault("url", cmd[-1])
-    gc.webbrowser.open = lambda url: opened.setdefault("url", url)
-    idt = "x." + __import__("base64").urlsafe_b64encode(json.dumps({"email": "student@school.org"}).encode()).decode().rstrip("=") + ".y"
-    gc._post_form = lambda url, fields: exchanged.update(fields) or {"access_token": "a", "refresh_token": "r",
-                                                                       "expires_in": 3600, "id_token": idt}
-    result = {}
-    t = threading.Thread(target=lambda: result.update(gc.login(timeout=20)))
-    t.start()
-    for _ in range(100):
-        if "url" in opened:
-            break
-        time.sleep(0.05)
-    q = urllib.parse.parse_qs(urllib.parse.urlparse(opened["url"]).query)
-    assert "classroom.courses.readonly" in q["scope"][0] and q["code_challenge_method"][0] == "S256"
-    redirect = q["redirect_uri"][0] + "?" + urllib.parse.urlencode({"state": q["state"][0], "code": "CODE123"})
-    page = urllib.request.urlopen(redirect, timeout=5).read().decode()
-    t.join(10)
-    assert "Signed in" in page and exchanged["code"] == "CODE123" and exchanged["code_verifier"]
-    tok = json.loads(gc.TOKEN.read_text())
-    assert tok["refresh_token"] == "r" and tok["email"] == "student@school.org"
-    assert oct(gc.TOKEN.stat().st_mode & 0o777) == "0o600"
+def main():
+    fx = fixtures()
+    r = rpc([{"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-06-18"}},
+             {"jsonrpc": "2.0", "method": "notifications/initialized"},
+             {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+             call(3, "gc_courses"), call(4, "gc_upcoming", {"days": 7}), call(5, "gc_coursework", {"course": "bio"}),
+             call(6, "gc_announcements", {"course": "biology"}), call(7, "gmail_search", {"query": "is:unread"}),
+             call(8, "gmail_read", {"message_id": "m100"}), call(9, "gmail_thread", {"thread_id": "t100"}),
+             call(10, "gmail_labels"), call(11, "gmail_read", {"message_id": "../../evil"}), call(12, "gc_status"),
+             call(13, "nope"), {"jsonrpc": "2.0", "id": 14, "method": "ping"}], {"CLASSROOM_MCP_FAKE": fx})
 
+    assert r[1]["result"]["serverInfo"]["name"] == "google-classroom-gmail"
+    names = {t["name"] for t in r[2]["result"]["tools"]}
+    assert names == {"gc_status", "gc_courses", "gc_upcoming", "gc_coursework", "gc_announcements", "gc_materials",
+                     "gmail_search", "gmail_read", "gmail_thread", "gmail_labels"}, names
+    assert all(t["annotations"]["readOnlyHint"] for t in r[2]["result"]["tools"])
+    assert [c["name"] for c in json.loads(text(r[3]))] == ["Year 12 Biology", "Year 12 History"]
+    up = json.loads(text(r[4]))
+    assert [u["title"] for u in up] == ["Mitosis essay"] and up[0]["status"] == "CREATED", up
+    cw = json.loads(text(r[5]))
+    assert cw["course"] == "Year 12 Biology" and cw["coursework"][0]["topic"] == "Unit 3 - Cell Biology"
+    assert json.loads(text(r[6]))["announcements"][0]["text"] == "Test on Friday!"
 
-def test_sync_skips_already_downloaded():
-    gc.FAKE = str(ROOT / "tests" / "fixtures.json")
-    gc._fake = None
-    for _ in range(2):
-        gc.start_sync()
-        while gc.JOB["running"]:
-            time.sleep(0.05)
-    rep = gc.JOB["report"]
-    assert rep["new_files"] == [] and "3 already there" in rep["summary"], rep
-    files = sorted(p.relative_to(TMP / "Classroom").as_posix() for p in (TMP / "Classroom").rglob("*.pdf"))
-    assert files == ["Year 12 Biology/Unit 3 - Cell Biology/Cell worksheet.pdf",
-                     "Year 12 Biology/Unit 3 - Cell Biology/Mitosis.pdf",
-                     "Year 12 History/Assignments/Sources pack.pdf"], files
+    s = json.loads(text(r[7]))
+    assert s["count"] == 2 and s["more"] is True
+    assert s["messages"][0]["subject"] == "Exam" and s["messages"][0]["unread"] is True
+    assert s["messages"][0]["snippet"] == 'Exam moved to "Friday"'
+    m = json.loads(text(r[8]))
+    assert m["body"] == "Exam moved to Friday.\nRoom 101.", m["body"]  # text/plain wins over html
+    assert m["attachments"] == [{"filename": "rules.pdf", "mimeType": "application/pdf", "size": 1234}]
+    t = json.loads(text(r[9]))
+    assert len(t["messages"]) == 2
+    html_body = t["messages"][1]["body"]
+    assert html_body == "Thanks & see you\n\n Bye" or ("Thanks & see you" in html_body and "p{}" not in html_body), html_body
+    assert {lb["name"] for lb in json.loads(text(r[10]))} == {"INBOX", "Uni"}
+    assert r[11]["result"]["isError"] and "Invalid message id" in text(r[11])
+    st = json.loads(text(r[12]))
+    assert st["signed_in"] and st["classroom"] and st["gmail"], st
+    assert r[13]["result"]["isError"]
+    assert r[14]["result"] == {}
+
+    # No credentials at all: tools report login_required instead of crashing.
+    r = rpc([call(1, "gc_courses"), call(2, "gc_status")], {})
+    assert json.loads(text(r[1]))["login_required"] is True
+    assert json.loads(text(r[2]))["signed_in"] is False
+
+    # Unknown CLI command exits non-zero.
+    p = subprocess.run([sys.executable, "-I", str(ROOT / "classroom_mcp.py"), "bogus"], capture_output=True, text=True)
+    assert p.returncode != 0
+    print("ok")
 
 
 if __name__ == "__main__":
-    tests = [v for k, v in list(globals().items()) if k.startswith("test_")]
-    for t in tests:
-        t()
-        print("✓", t.__name__)
-    print(f"{len(tests)} passed")
+    main()

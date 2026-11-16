@@ -156,23 +156,214 @@
    }
   ]
  },
- "/drive/v3/files/F_SLIDES": {
-  "id": "F_SLIDES",
-  "name": "Mitosis",
-  "mimeType": "application/vnd.google-apps.presentation",
-  "modifiedTime": "2026-10-01T00:00:00Z"
+ "/gmail/v1/users/me/messages": {
+  "messages": [
+   {
+    "id": "m100",
+    "threadId": "t100"
+   },
+   {
+    "id": "m101",
+    "threadId": "t100"
+   }
+  ],
+  "nextPageToken": "next"
  },
- "/drive/v3/files/F_SLIDES/export": "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n",
- "/drive/v3/files/F_PDF": {
-  "id": "F_PDF",
-  "name": "Cell worksheet.pdf",
-  "mimeType": "application/pdf"
+ "/gmail/v1/users/me/messages/m100": {
+  "id": "m100",
+  "threadId": "t100",
+  "labelIds": [
+   "INBOX",
+   "UNREAD"
+  ],
+  "snippet": "Exam moved to &quot;Friday&quot;",
+  "payload": {
+   "mimeType": "multipart/mixed",
+   "headers": [
+    {
+     "name": "From",
+     "value": "prof@uni.edu"
+    },
+    {
+     "name": "To",
+     "value": "student@school.org"
+    },
+    {
+     "name": "Subject",
+     "value": "Exam"
+    },
+    {
+     "name": "Date",
+     "value": "Mon, 16 Nov 2026 10:00:00 +0000"
+    }
+   ],
+   "parts": [
+    {
+     "mimeType": "multipart/alternative",
+     "parts": [
+      {
+       "mimeType": "text/plain",
+       "body": {
+        "data": "RXhhbSBtb3ZlZCB0byBGcmlkYXkuClJvb20gMTAxLg"
+       }
+      },
+      {
+       "mimeType": "text/html",
+       "body": {
+        "data": "PHA-RXhhbSBtb3ZlZCB0byA8Yj5GcmlkYXk8L2I-PC9wPg"
+       }
+      }
+     ]
+    },
+    {
+     "mimeType": "application/pdf",
+     "filename": "rules.pdf",
+     "body": {
+      "size": 1234,
+      "attachmentId": "A1"
+     }
+    }
+   ]
+  }
  },
- "/drive/v3/files/F_PDF?alt=media": "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n",
- "/drive/v3/files/F_DOC": {
-  "id": "F_DOC",
-  "name": "Sources pack",
-  "mimeType": "application/vnd.google-apps.document"
+ "/gmail/v1/users/me/messages/m101": {
+  "id": "m101",
+  "threadId": "t100",
+  "labelIds": [
+   "INBOX"
+  ],
+  "snippet": "ok",
+  "payload": {
+   "mimeType": "text/html",
+   "headers": [
+    {
+     "name": "From",
+     "value": "me@school.org"
+    },
+    {
+     "name": "To",
+     "value": "student@school.org"
+    },
+    {
+     "name": "Subject",
+     "value": "Re: Exam"
+    },
+    {
+     "name": "Date",
+     "value": "Mon, 16 Nov 2026 10:00:00 +0000"
+    }
+   ],
+   "body": {
+    "data": "PGh0bWw-PGhlYWQ-PHN0eWxlPnB7fTwvc3R5bGU-PC9oZWFkPjxib2R5PjxwPlRoYW5rcyZuYnNwOyZhbXA7IHNlZSB5b3U8L3A-PGJyPkJ5ZTwvYm9keT48L2h0bWw-"
+   }
+  }
  },
- "/drive/v3/files/F_DOC/export": "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"
+ "/gmail/v1/users/me/threads/t100": {
+  "id": "t100",
+  "messages": [
+   {
+    "id": "m100",
+    "threadId": "t100",
+    "labelIds": [
+     "INBOX",
+     "UNREAD"
+    ],
+    "snippet": "Exam moved to &quot;Friday&quot;",
+    "payload": {
+     "mimeType": "multipart/mixed",
+     "headers": [
+      {
+       "name": "From",
+       "value": "prof@uni.edu"
+      },
+      {
+       "name": "To",
+       "value": "student@school.org"
+      },
+      {
+       "name": "Subject",
+       "value": "Exam"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 16 Nov 2026 10:00:00 +0000"
+      }
+     ],
+     "parts": [
+      {
+       "mimeType": "multipart/alternative",
+       "parts": [
+        {
+         "mimeType": "text/plain",
+         "body": {
+          "data": "RXhhbSBtb3ZlZCB0byBGcmlkYXkuClJvb20gMTAxLg"
+         }
+        },
+        {
+         "mimeType": "text/html",
+         "body": {
+          "data": "PHA-RXhhbSBtb3ZlZCB0byA8Yj5GcmlkYXk8L2I-PC9wPg"
+         }
+        }
+       ]
+      },
+      {
+       "mimeType": "application/pdf",
+       "filename": "rules.pdf",
+       "body": {
+        "size": 1234,
+        "attachmentId": "A1"
+       }
+      }
+     ]
+    }
+   },
+   {
+    "id": "m101",
+    "threadId": "t100",
+    "labelIds": [
+     "INBOX"
+    ],
+    "snippet": "ok",
+    "payload": {
+     "mimeType": "text/html",
+     "headers": [
+      {
+       "name": "From",
+       "value": "me@school.org"
+      },
+      {
+       "name": "To",
+       "value": "student@school.org"
+      },
+      {
+       "name": "Subject",
+       "value": "Re: Exam"
+      },
+      {
+       "name": "Date",
+       "value": "Mon, 16 Nov 2026 10:00:00 +0000"
+      }
+     ],
+     "body": {
+      "data": "PGh0bWw-PGhlYWQ-PHN0eWxlPnB7fTwvc3R5bGU-PC9oZWFkPjxib2R5PjxwPlRoYW5rcyZuYnNwOyZhbXA7IHNlZSB5b3U8L3A-PGJyPkJ5ZTwvYm9keT48L2h0bWw-"
+     }
+    }
+   }
+  ]
+ },
+ "/gmail/v1/users/me/labels": {
+  "labels": [
+   {
+    "id": "INBOX",
+    "name": "INBOX",
+    "type": "system"
+   },
+   {
+    "id": "Label_1",
+    "name": "Uni",
+    "type": "user"
+   }
+  ]
+ }
 }

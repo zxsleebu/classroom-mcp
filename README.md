@@ -43,7 +43,7 @@ It is still a single Python file with no dependencies, and it only talks to `acc
 ### 2. Sign in on your own computer (once)
 
 ```bash
-uvx --from git+https://github.com/zxsleebu/classroom-mcp.git@b4b3a9a29038ec9d85d6d7b023b4dcde2b068478 classroom-mcp login
+uvx --from git+https://github.com/zxsleebu/classroom-mcp.git@eb0098d1dfb90dcc493cbeb184688faeb7ec1db3 classroom-mcp login
 # without mail:      … classroom-mcp login --no-gmail
 ```
 
